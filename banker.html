@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Банкерът</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0b0a10; --panel:#15131c; --line:#2c2838;
+  --gold:#d4af37; --gold-light:#f6e27a; --cream:#f5efe0; --muted:#a39d8f;
+  --low:#2f7ae5; --low-dark:#1b4c96; --high:#d4af37; --high-dark:#8a6e1c;
+  --green:#4ade80; --red:#ff5c5c;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:'Inter',system-ui,sans-serif;color:var(--cream);min-height:100vh;
+  background:
+    radial-gradient(ellipse at 50% -10%,rgba(212,175,55,.22),transparent 55%),
+    radial-gradient(ellipse at 50% 120%,rgba(47,122,229,.15),transparent 50%),
+    var(--bg);
+}
+header{max-width:1250px;margin:0 auto;padding:20px 16px 10px;display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap}
+.logo h1{
+  font-family:'Playfair Display',serif;font-weight:900;font-size:2.3rem;letter-spacing:2px;
+  background:linear-gradient(180deg,var(--gold-light),var(--gold) 60%,#9c7a1e);-webkit-background-clip:text;background-clip:text;color:transparent;
+}
+.logo small{display:block;color:var(--muted);font-size:.75rem;letter-spacing:3px;text-transform:uppercase}
+.stats{display:flex;gap:10px;flex-wrap:wrap}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:8px 14px;text-align:center}
+.stat .lbl{font-size:.65rem;color:var(--muted);letter-spacing:2px;text-transform:uppercase}
+.stat .v{font-family:'Playfair Display',serif;font-size:1.25rem;color:var(--gold-light)}
+
+.banner{
+  max-width:1250px;margin:6px auto 14px;padding:0 16px;
+}
+.banner div{
+  background:linear-gradient(90deg,transparent,rgba(212,175,55,.15),transparent);border-top:1px solid rgba(212,175,55,.35);border-bottom:1px solid rgba(212,175,55,.35);
+  text-align:center;padding:12px;font-family:'Playfair Display',serif;font-size:1.3rem;color:var(--gold-light);min-height:1.5em;
+}
+
+main{max-width:1250px;margin:0 auto;padding:0 16px 30px;display:grid;grid-template-columns:200px 1fr 200px;gap:16px;align-items:start}
+@media(max-width:980px){
+  main{grid-template-columns:1fr 1fr}
+  .stage{grid-column:1/-1;order:-1}
+}
+
+/* Табла със суми */
+.board{display:flex;flex-direction:column;gap:5px}
+.val{
+  position:relative;padding:7px 10px;border-radius:8px;text-align:right;font-weight:800;font-size:.95rem;
+  border:1px solid rgba(255,255,255,.15);transition:.4s;
+}
+.board.low .val{background:linear-gradient(90deg,var(--low-dark),var(--low));}
+.board.high .val{background:linear-gradient(90deg,var(--high-dark),var(--high));color:#1e1400}
+.val.gone{opacity:.18;filter:grayscale(1);transform:scale(.96)}
+.val.gone::after{content:"";position:absolute;left:8px;right:8px;top:50%;height:2px;background:#fff;opacity:.7}
+
+/* Сцена */
+.stage{background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:16px;box-shadow:0 14px 34px rgba(0,0,0,.6)}
+.my-box{display:flex;align-items:center;justify-content:center;gap:16px;margin-bottom:14px;min-height:96px}
+.my-box .lbl{font-family:'Playfair Display',serif;color:var(--muted);font-size:1rem;text-align:right}
+.my-box .lbl b{display:block;color:var(--gold-light);font-size:1.3rem}
+.boxes{display:grid;grid-template-columns:repeat(7,1fr);gap:16px 9px;padding-top:8px}
+@media(max-width:560px){.boxes{grid-template-columns:repeat(5,1fr);gap:14px 7px}}
+
+.box{
+  position:relative;aspect-ratio:1.25;border-radius:10px;cursor:pointer;border:none;
+  background:linear-gradient(160deg,#e9e9ee 0%,#b8b8c2 45%,#8d8d99 100%);
+  box-shadow:0 4px 0 #5d5d68,0 8px 14px rgba(0,0,0,.5),inset 0 2px 3px rgba(255,255,255,.8);
+  transition:transform .12s;color:#1b1b22;
+}
+.box::before{ /* дръжка */
+  content:"";position:absolute;top:-7px;left:50%;transform:translateX(-50%);width:34%;height:10px;
+  border:3px solid #7a7a86;border-bottom:none;border-radius:6px 6px 0 0;
+}
+.box .no{
+  position:absolute;inset:18% 16%;border-radius:6px;display:grid;place-items:center;
+  background:linear-gradient(180deg,#1b1b22,#2c2c36);color:var(--gold-light);
+  font:900 clamp(.95rem,2.4vw,1.4rem) 'Playfair Display',serif;box-shadow:inset 0 2px 4px rgba(0,0,0,.6);
+}
+.box:hover:not(:disabled){transform:translateY(-3px)}
+.box:disabled{cursor:default}
+.box.opened{background:transparent;box-shadow:none;border:1px dashed var(--line)}
+.box.opened::before{display:none}
+.box.opened .no{background:transparent;color:var(--muted);font-size:.75rem;box-shadow:none;opacity:.5}
+.box.mine{visibility:hidden}
+.box.pickable{animation:glow 1.2s ease-in-out infinite alternate}
+@keyframes glow{to{box-shadow:0 4px 0 #5d5d68,0 0 18px var(--gold),inset 0 2px 3px rgba(255,255,255,.8)}}
+.my-box .box{width:120px;cursor:default}
+
+/* Отворена кутия - сума */
+.reveal{
+  position:fixed;inset:0;z-index:50;display:none;align-items:center;justify-content:center;
+  background:rgba(5,4,10,.6);backdrop-filter:blur(2px);
+}
+.reveal.show{display:flex}
+.reveal .card{
+  text-align:center;padding:24px 40px;border-radius:18px;animation:pop .35s;
+  box-shadow:0 0 40px rgba(0,0,0,.6);border:3px solid #fff;
+}
+.reveal .card.low{background:linear-gradient(180deg,var(--low),var(--low-dark))}
+.reveal .card.high{background:linear-gradient(180deg,var(--gold-light),var(--high-dark));color:#1e1400}
+.reveal .card small{display:block;font-size:.85rem;letter-spacing:2px;text-transform:uppercase;opacity:.85}
+.reveal .card b{font:900 2.8rem 'Playfair Display',serif}
+
+/* Обаждане от банкера */
+.modal{
+  position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;padding:16px;
+  background:rgba(5,4,10,.82);backdrop-filter:blur(5px);
+}
+.modal.show{display:flex}
+.call{
+  width:100%;max-width:420px;text-align:center;padding:26px 22px;border-radius:22px;animation:pop .4s;
+  background:linear-gradient(180deg,#1c1924,#0f0d14);border:2px solid var(--gold);box-shadow:0 0 50px rgba(212,175,55,.25);
+}
+.phone{font-size:3.2rem;display:inline-block;animation:ring .5s ease-in-out infinite}
+.phone.quiet{animation:none}
+@keyframes ring{0%,100%{transform:rotate(0)}20%{transform:rotate(-18deg)}40%{transform:rotate(16deg)}60%{transform:rotate(-12deg)}80%{transform:rotate(8deg)}}
+.call h3{font-family:'Playfair Display',serif;font-size:1.5rem;color:var(--gold-light);margin:8px 0 4px}
+.call p{color:var(--muted);font-size:.95rem}
+.offer{font:900 2.8rem 'Playfair Display',serif;color:var(--green);margin:14px 0 18px;text-shadow:0 0 18px rgba(74,222,128,.35)}
+.btns{display:flex;gap:10px}
+.btn{
+  flex:1;border:none;border-radius:40px;padding:15px 10px;cursor:pointer;
+  font:900 1.05rem 'Playfair Display',serif;letter-spacing:1.5px;text-transform:uppercase;transition:.1s;
+}
+.btn:active{transform:translateY(3px)}
+.deal{background:linear-gradient(180deg,#5ef08f,#1f9d52);color:#062612;box-shadow:0 4px 0 #136b37}
+.nodeal{background:linear-gradient(180deg,#ff7a7a,#c0262d);color:#fff;box-shadow:0 4px 0 #7f1419}
+.gold{background:linear-gradient(180deg,var(--gold-light),var(--gold) 55%,#a8841f);color:#2b1d00;box-shadow:0 4px 0 #7a5d12}
+.ghost{background:transparent;color:var(--cream);border:1px solid var(--line)}
+.offers-list{margin-top:14px;font-size:.8rem;color:var(--muted)}
+
+/* Край */
+.end-title{font:900 1.9rem 'Playfair Display',serif;color:var(--gold-light)}
+.end-win{font:900 3rem 'Playfair Display',serif;color:var(--green);margin:8px 0}
+.end-note{color:var(--muted);margin-bottom:18px;line-height:1.5}
+
+.history{margin-top:16px;display:flex;flex-direction:column;gap:6px}
+.history h4{font-family:'Playfair Display',serif;color:var(--gold-light);font-size:1rem;letter-spacing:1px}
+.h-item{display:flex;justify-content:space-between;gap:8px;padding:7px 12px;border-radius:10px;background:rgba(255,255,255,.04);font-size:.85rem;flex-wrap:wrap}
+.h-item .muted{color:var(--muted)}
+.empty{color:var(--muted);text-align:center;padding:8px;font-size:.88rem}
+
+@keyframes pop{0%{transform:scale(.5);opacity:0}70%{transform:scale(1.06)}100%{transform:scale(1);opacity:1}}
+footer{text-align:center;color:var(--muted);font-size:.8rem;padding:0 16px 30px;opacity:.8}
+@media(max-width:560px){
+  .logo h1{font-size:1.9rem}
+  .val{font-size:.82rem;padding:6px 8px}
+  .offer{font-size:2.2rem}
+  .reveal .card b{font-size:2.2rem}
+  .banner div{font-size:1.05rem}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <h1>Банкерът</h1>
+    <small>26 кутии • $0.10 до $1 000 000</small>
+  </div>
+  <div class="stats">
+    <div class="stat"><div class="lbl">Игри</div><div class="v" id="stGames">0</div></div>
+    <div class="stat"><div class="lbl">Рекорд</div><div class="v" id="stBest">$0</div></div>
+    <div class="stat"><div class="lbl">Общо спечелено</div><div class="v" id="stTotal">$0</div></div>
+  </div>
+</header>
+
+<div class="banner"><div id="banner">Избери своята кутия</div></div>
+
+<main>
+  <div class="board low" id="boardLow"></div>
+
+  <section class="stage">
+    <div class="my-box" id="myBox"></div>
+    <div class="boxes" id="boxes"></div>
+    <div class="history" id="history"></div>
+  </section>
+
+  <div class="board high" id="boardHigh"></div>
+</main>
+
+<footer>Банкерът е игра само за забавление. Сумите са виртуални — нищо не се плаща и нищо не се печели наистина.</footer>
+
+<div class="reveal" id="reveal"></div>
+<div class="modal" id="modal"></div>
+
+<script>
+/* ---------- НАСТРОЙКИ ---------- */
+const VALUES = [0.10, 1, 5, 10, 25, 50, 75, 100, 200, 300, 400, 500, 750,
+                1000, 5000, 10000, 25000, 50000, 75000, 100000, 200000, 300000, 400000, 500000, 750000, 1000000];
+const ROUNDS = [6, 5, 4, 3, 2, 1, 1, 1, 1];   // колко кутии се отварят във всеки рунд
+const SWAP_CHANCE = 0.25;                    // шанс банкерът да предложи смяна вместо пари
+const STORAGE_KEY = 'bankerut';
+
+/* ---------- СЪСТОЯНИЕ ---------- */
+let g;           // текущата игра
+let stats = { games: 0, best: 0, total: 0, history: [] };
+let busy = false;
+
+const $ = id => document.getElementById(id);
+const money = v => (v > 0 && v < 1) ? '$' + v.toFixed(2) : '$' + Math.round(v).toLocaleString('en-US');
+
+/* ---------- СЛУЧАЙНОСТ ---------- */
+function rnd(){
+  if (window.crypto && crypto.getRandomValues){ const a = new Uint32Array(1); crypto.getRandomValues(a); return a[0] / 4294967296; }
+  return Math.random();
+}
+const ri = n => Math.floor(rnd() * n);
+function shuffle(a){ for (let i = a.length - 1; i > 0; i--){ const j = ri(i + 1); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+
+/* ---------- ЗВУК (без външни файлове) ---------- */
+let actx = null;
+function audio(){ try{ if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)(); if (actx.state === 'suspended') actx.resume(); }catch(e){} return actx; }
+function beep(freq, dur, when = 0, type = 'sine', vol = .15){
+  const a = audio(); if (!a) return;
+  const o = a.createOscillator(), gn = a.createGain();
+  o.type = type; o.frequency.value = freq;
+  gn.gain.setValueAtTime(vol, a.currentTime + when);
+  gn.gain.exponentialRampToValueAtTime(.0001, a.currentTime + when + dur);
+  o.connect(gn).connect(a.destination); o.start(a.currentTime + when); o.stop(a.currentTime + when + dur + .02);
+}
+function ringSound(){ for (let i = 0; i < 2; i++){ for (let k = 0; k < 8; k++){ beep(k % 2 ? 480 : 440, .05, i * .9 + k * .05, 'square', .06); } } }
+function openSound(high){ high ? [523, 659, 784].forEach((f, i) => beep(f, .25, i * .08, 'triangle', .12)) : beep(220, .3, 0, 'sine', .15); }
+function winSound(){ [523, 659, 784, 1047].forEach((f, i) => beep(f, .4, i * .12, 'triangle', .14)); }
+
+/* ---------- ЗАПИС ---------- */
+function load(){ try{ const s = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null'); if (s) stats = Object.assign(stats, s); }catch(e){} }
+function save(){ try{ stats.history = stats.history.slice(0, 10); localStorage.setItem(STORAGE_KEY, JSON.stringify(stats)); }catch(e){} }
+
+/* ---------- НОВА ИГРА ---------- */
+function newGame(){
+  const vals = shuffle([...VALUES]);
+  g = {
+    boxes: vals.map((v, i) => ({ n: i + 1, v, open: false })),
+    mine: null,
+    phase: 'pick',        // pick | open | swap | done
+    round: 0, left: ROUNDS[0],
+    offers: []
+  };
+  closeModal();
+  setBanner('Избери своята кутия');
+  render();
+}
+
+/* ---------- РЕНДЕР ---------- */
+function render(){
+  const gone = new Set(g.boxes.filter(b => b.open).map(b => b.v));
+  const sorted = [...VALUES];
+  $('boardLow').innerHTML  = sorted.slice(0, 13).map(v => `<div class="val ${gone.has(v) ? 'gone' : ''}">${money(v)}</div>`).join('');
+  $('boardHigh').innerHTML = sorted.slice(13).map(v => `<div class="val ${gone.has(v) ? 'gone' : ''}">${money(v)}</div>`).join('');
+
+  const canOpen = g.phase === 'open' && !busy;
+  const canPick = (g.phase === 'pick' || g.phase === 'swap') && !busy;
+  $('boxes').innerHTML = g.boxes.map(b => {
+    const isMine = b.n === g.mine;
+    const clickable = !b.open && !isMine && (canOpen || canPick);
+    return `<button class="box ${b.open ? 'opened' : ''} ${isMine ? 'mine' : ''} ${canPick && !b.open && !isMine ? 'pickable' : ''}"
+      data-n="${b.n}" ${clickable ? '' : 'disabled'}><span class="no">${b.open ? money(b.v) : b.n}</span></button>`;
+  }).join('');
+  document.querySelectorAll('#boxes .box').forEach(el => el.onclick = () => clickBox(+el.dataset.n));
+
+  $('myBox').innerHTML = g.mine
+    ? `<div class="lbl">Твоята кутия<b>№ ${g.mine}</b></div><button class="box" disabled><span class="no">${g.mine}</span></button>`
+    : `<div class="lbl" style="text-align:center">Още нямаш кутия.<br>Избери една от 26-те.</div>`;
+
+  $('stGames').textContent = stats.games;
+  $('stBest').textContent = money(stats.best);
+  $('stTotal').textContent = money(stats.total);
+  renderHistory();
+}
+
+function renderHistory(){
+  $('history').innerHTML = '<h4>Последни игри</h4>' + (stats.history.length
+    ? stats.history.map(h => `<div class="h-item"><span>${h.how}</span><span><b style="color:var(--green)">${money(h.win)}</b> <span class="muted">• в кутията: ${money(h.box)}</span></span></div>`).join('')
+    : '<div class="empty">Още няма изиграни игри.</div>');
+}
+
+function setBanner(t){ $('banner').textContent = t; }
+function bannerRound(){
+  setBanner(`Рунд ${g.round + 1}: отвори още ${g.left} ${g.left === 1 ? 'кутия' : 'кутии'}`);
+}
+
+/* ---------- ИГРА ---------- */
+function clickBox(n){
+  audio();
+  if (busy) return;
+  const b = g.boxes[n - 1];
+  if (b.open || n === g.mine) return;
+
+  if (g.phase === 'pick'){
+    g.mine = n; g.phase = 'open'; bannerRound(); render(); return;
+  }
+  if (g.phase === 'swap'){
+    const old = g.mine; g.mine = n; g.phase = 'open';
+    setBanner(`Смени кутия № ${old} с № ${n}.`);
+    render();
+    setTimeout(() => { if (g.phase === 'open') bannerRound(); }, 1600);
+    return;
+  }
+  if (g.phase === 'open') openBox(b);
+}
+
+function openBox(b){
+  busy = true;
+  b.open = true;
+  const high = b.v >= 1000;
+  openSound(high);
+  $('reveal').innerHTML = `<div class="card ${high ? 'high' : 'low'}"><small>Кутия № ${b.n}</small><b>${money(b.v)}</b></div>`;
+  $('reveal').classList.add('show');
+  render();
+
+  setTimeout(() => {
+    $('reveal').classList.remove('show');
+    busy = false;
+    g.left--;
+    if (g.left > 0){ bannerRound(); render(); return; }
+    // край на рунда
+    const closed = g.boxes.filter(x => !x.open);
+    if (closed.length === 2) return finalChoice();
+    if (g.round >= 1 && rnd() < SWAP_CHANCE) swapCall(); else bankerCall();
+  }, 1300);
+}
+
+function remaining(){ return g.boxes.filter(b => !b.open).map(b => b.v); }
+
+function makeOffer(){
+  const vals = remaining();
+  const ev = vals.reduce((s, v) => s + v, 0) / vals.length;
+  const r = g.round;
+  const lo = Math.min(.15 + r * .08, .9), hi = Math.min(.5 + r * .09, 1.25);
+  let o = ev * (lo + rnd() * (hi - lo));
+  if (rnd() < .1) o *= .4 + rnd() * .3;          // понякога банкерът е много стиснат
+  o = Math.max(o, Math.min(...vals));
+  if (o >= 100000) o = Math.round(o / 1000) * 1000;
+  else if (o >= 10000) o = Math.round(o / 100) * 100;
+  else if (o >= 1000) o = Math.round(o / 10) * 10;
+  else if (o >= 1) o = Math.round(o);
+  return o;
+}
+
+function bankerCall(){
+  const offer = makeOffer();
+  g.offers.push(offer);
+  ringSound();
+  showModal(`
+    <div class="call">
+      <div class="phone">☎️</div>
+      <h3>Банкерът се обажда…</h3>
+      <p>Предлага ти да купи кутия № ${g.mine} за:</p>
+      <div class="offer">${money(offer)}</div>
+      <div class="btns">
+        <button class="btn deal" id="bDeal">Сделка</button>
+        <button class="btn nodeal" id="bNo">Няма сделка</button>
+      </div>
+      ${g.offers.length > 1 ? `<div class="offers-list">Предишни оферти: ${g.offers.slice(0, -1).map(money).join(' • ')}</div>` : ''}
+    </div>`);
+  $('bDeal').onclick = () => takeDeal(offer);
+  $('bNo').onclick = () => { closeModal(); nextRound(); };
+}
+
+function swapCall(){
+  ringSound();
+  showModal(`
+    <div class="call">
+      <div class="phone">☎️</div>
+      <h3>Банкерът се обажда…</h3>
+      <p>Този път не предлага пари.<br>Предлага ти да <b style="color:var(--gold-light)">смениш кутията си</b> с някоя от затворените.</p>
+      <div style="height:18px"></div>
+      <div class="btns">
+        <button class="btn gold" id="bSwap">Смени</button>
+        <button class="btn ghost" id="bKeep">Задържам моята</button>
+      </div>
+    </div>`);
+  $('bSwap').onclick = () => { closeModal(); nextRound(true); };
+  $('bKeep').onclick = () => { closeModal(); nextRound(); };
+}
+
+function nextRound(swap = false){
+  g.round++;
+  g.left = ROUNDS[g.round];
+  if (swap){ g.phase = 'swap'; setBanner(`Избери новата си кутия (сега имаш № ${g.mine})`); }
+  else { g.phase = 'open'; bannerRound(); }
+  render();
+}
+
+function finalChoice(){
+  const other = g.boxes.find(b => !b.open && b.n !== g.mine);
+  const offer = makeOffer();
+  g.offers.push(offer);
+  ringSound();
+  showModal(`
+    <div class="call">
+      <div class="phone">☎️</div>
+      <h3>Последното обаждане</h3>
+      <p>Останаха две кутии: твоята № ${g.mine} и № ${other.n}.<br>Банкерът предлага:</p>
+      <div class="offer">${money(offer)}</div>
+      <div class="btns">
+        <button class="btn deal" id="bDeal">Сделка</button>
+        <button class="btn nodeal" id="bNo">Няма сделка</button>
+      </div>
+    </div>`);
+  $('bDeal').onclick = () => takeDeal(offer);
+  $('bNo').onclick = () => {
+    showModal(`
+      <div class="call">
+        <div class="phone quiet">📦</div>
+        <h3>Последен избор</h3>
+        <p>Задържаш ли кутия № ${g.mine} или я сменяш с № ${other.n}?</p>
+        <div style="height:18px"></div>
+        <div class="btns">
+          <button class="btn gold" id="bKeep">Задържам № ${g.mine}</button>
+          <button class="btn ghost" id="bSw">Вземам № ${other.n}</button>
+        </div>
+      </div>`);
+    $('bKeep').onclick = () => endGame(null, false);
+    $('bSw').onclick = () => { g.mine = other.n; endGame(null, true); };
+  };
+}
+
+function takeDeal(offer){ endGame(offer, false); }
+
+function endGame(dealAmount, swapped){
+  g.phase = 'done';
+  const myVal = g.boxes[g.mine - 1].v;
+  const win = dealAmount != null ? dealAmount : myVal;
+  g.boxes.forEach(b => b.open = true);
+
+  stats.games++;
+  stats.total += win;
+  stats.best = Math.max(stats.best, win);
+  stats.history.unshift({ win, box: myVal, how: dealAmount != null ? '🤝 Сделка' : (swapped ? '🔄 Смени накрая' : '📦 До края') });
+  save();
+  render();
+  winSound();
+
+  let note;
+  if (dealAmount != null){
+    note = myVal > dealAmount
+      ? `В кутия № ${g.mine} имаше <b>${money(myVal)}</b>.<br>Банкерът те надхитри този път!`
+      : `В кутия № ${g.mine} имаше само <b>${money(myVal)}</b>.<br>Ти надхитри банкера! 😎`;
+  } else {
+    const best = g.offers.length ? Math.max(...g.offers) : 0;
+    note = `Най-добрата оферта на банкера беше <b>${money(best)}</b>.`;
+  }
+  showModal(`
+    <div class="call">
+      <div class="phone quiet">${win >= 100000 ? '🏆' : win >= 1000 ? '💰' : '🙃'}</div>
+      <div class="end-title">${dealAmount != null ? 'Сделка!' : 'Кутия № ' + g.mine}</div>
+      <div class="end-win">${money(win)}</div>
+      <p class="end-note">${note}</p>
+      <div class="btns"><button class="btn gold" id="bNew">Нова игра</button></div>
+    </div>`);
+  $('bNew').onclick = newGame;
+  setBanner(`Спечели ${money(win)}!`);
+}
+
+function showModal(html){ $('modal').innerHTML = html; $('modal').classList.add('show'); }
+function closeModal(){ $('modal').classList.remove('show'); $('modal').innerHTML = ''; }
+
+/* ---------- СТАРТ ---------- */
+load();
+newGame();
+</script>
+</body>
+</html>
